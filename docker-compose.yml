@@ -1,0 +1,159 @@
+version: "3"
+services:
+  clxmonitoring:
+    hostname: clxmonitoring
+    build:
+      context: ./clxmonitoring
+    container_name: clxmonitoring
+    ports:
+      - 3000:3000
+    environment:
+      - WS_SECRET=peerpass
+      - PORT=3000
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "10"
+    restart: always
+    networks:
+      chainnet:
+        ipv4_address: 172.55.0.104
+
+  clxbootnode:
+    hostname: clxbootnode
+    environment:
+      - nodekeyhex=53cff0434e7c1c0f946848db7bcf56d7fe700b524ebd3b134e047487d44690fb
+      - bootnodeIp=172.55.0.105
+    build:
+      context: ./clxbootnode
+    container_name: bootnode
+    ports:
+      - 30301:30301
+      - 30301:30301/udp
+      
+    networks:
+      chainnet:
+        ipv4_address: 172.55.0.105
+
+  coinlunisx-node1:
+    hostname: coinlunisx-node1
+    depends_on:
+      - clxbootnode
+    environment:
+      - address=0x1bb7a110f310934efecfbd88db409a73282c1cc1
+      - bootnodeId=e9cc1bfef384ee56563dcbe1c31be69e2ef918932cd0957a6d85fc7040cb2f33e1c6160489f539256262a4c50e05522579eaaa7023d3315983cd2f8d88de19da
+      - bootnodeIp=172.55.0.105
+      - clxmonitoringaddress=172.55.0.104
+      - clxmonitoringport=3000       
+      - clxmonitoringsName="CoinlunisX-Node1"
+      - clxmonitoringsSecret="peerpass"
+    build:
+      context: ./clxsigner
+      dockerfile: Dockerfile-clx1
+      args:
+        signer.pass: peerpass
+    container_name: CoinlunisX-Node1
+    ports:
+      - 8545:8545
+      - 30303:30303
+      - 30303:30303/udp
+    healthcheck:
+      test: wget http://localhost:8545
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - eth-data-1:/root/.ethash
+    networks:
+      chainnet:
+        ipv4_address: 172.55.0.106
+
+  coinlunisx-node2:
+    hostname: CoinlunisX-Node2
+    depends_on:
+      - coinlunisx-node1
+    environment:
+      - address=0x599f16e36dc11736a6827b1458e18e1f325181da
+      - bootnodeId=e9cc1bfef384ee56563dcbe1c31be69e2ef918932cd0957a6d85fc7040cb2f33e1c6160489f539256262a4c50e05522579eaaa7023d3315983cd2f8d88de19da
+      - bootnodeIp=172.55.0.105
+      - clxmonitoringaddress=172.55.0.104
+      - clxmonitoringport=3000  
+      - clxmonitoringsName="CoinlunisX-Node2" 
+      - clxmonitoringsSecret="peerpass"
+    build:
+      context: ./clxsigner
+      dockerfile: Dockerfile-clx2
+      args:
+        password: peerpass
+    container_name: CoinlunisX-Node2
+    ports:
+      - 8546:8545
+      - 30304:30304
+      - 30304:30304/udp
+    healthcheck:
+      test: wget http://localhost:8545
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    volumes:
+     - eth-data-2:/root/.ethash
+    networks:
+      chainnet:
+        ipv4_address: 172.55.0.107
+
+  coinlunisx-node3:
+     hostname: CoinlunisX-Node3
+     depends_on:
+       - coinlunisx-node2
+     environment:
+       - address=0x5054db3275fde21e93b5d99f81f4d4a215366730
+       - bootnodeId=e9cc1bfef384ee56563dcbe1c31be69e2ef918932cd0957a6d85fc7040cb2f33e1c6160489f539256262a4c50e05522579eaaa7023d3315983cd2f8d88de19da
+       - bootnodeIp=172.55.0.105
+       - clxmonitoringaddress=172.55.0.104
+       - clxmonitoringport=3000  
+       - clxmonitoringsName="CoinlunisX-Node3" 
+       - clxmonitoringsSecret="peerpass"
+     build:
+       context: ./clxsigner
+       dockerfile: Dockerfile-clx3
+       args:
+         password: peerpass
+     container_name: CoinlunisX-Node3
+     ports:
+       - 8547:8545
+       - 30305:30305
+       - 30305:30305/udp
+     healthcheck:
+       test: wget http://localhost:8545
+       interval: 2s
+       timeout: 5s
+       retries: 30
+     volumes:
+      - eth-data-3:/root/.ethash
+     networks:
+       chainnet:
+         ipv4_address: 172.55.0.108
+
+  clxexplorer:
+    hostname: clxexplorer
+    depends_on:
+      - coinlunisx-node1
+    ports:
+      - 8080:8080
+    build:
+      context: ./clxexplorer
+    container_name: clxexplorer
+    networks:
+      chainnet:
+        ipv4_address: 172.55.0.125
+networks:
+  chainnet:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.55.0.0/24
+volumes:
+  eth-data-1:
+  eth-data-2:
+  eth-data-3:
